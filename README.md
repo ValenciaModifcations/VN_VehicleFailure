@@ -1,18 +1,17 @@
-# VN_VehicleFailure
+# 🚗 VN_VehicleFailure
 
-VN_VehicleFailure is specifically designed for ND_Core ([ND_Core GitHub](https://github.com/ND-Framework/ND_Core/tree/main))
+Welcome to **VN_VehicleFailure**, a meticulously crafted script tailored for seamless integration with ND_Core. Developed and modernized by the talented duo, Josh F and Shawn V of Valencia Networks. All rights reserved. Special gratitude to TheStoicBear, a valuable staff member in the ND_Framework's Discord, for their noteworthy contributions.
 
-This is a modified version of [RealisticVehicleFailure](https://github.com/iEns/RealisticVehicleFailure) modernized and modified by Josh F and Shawn V of Valencia Networks. All rights reserved. We received assistance from TheStoicBear, a staff member in the ND_Framework's Discord.
+## 🛠️ ND_CORE REQUIRED!!!
+This script is an essential component of ND_Core. For a standalone version, explore the [RealisticVehicleFailure GitHub](link-to-realistic-vehicle-failure).
 
-## ND_CORE REQUIRED!!!
+### ✨ Features / Usage
 
-This script will likely not work without ND_Core. Please visit the [RealisticVehicleFailure GitHub link](https://github.com/iEns/RealisticVehicleFailure) for a standalone version.
+- **Economy Integration:** Witness repair costs dynamically adjusting based on the extent of vehicle damage.
+- **User-Friendly Commands:**
+  - Use `/repair` when outside a mechanic shop.
+  - Execute `/mrepair` within the confines of a mechanic shop.
 
-## Features / Usage
+### 📣 Notice
 
-Tied into the economy, the price of repair scales with damage to the vehicle. 
-If you aren't at a mechanic shop, do `/repair`. If you are, do `/mrepair`. 
-
-## Notice
-
-This is the bare-bones version of this script. I intend to develop a more sophisticated script with HTML, allowing players to roleplay as mechanics and make money.
+This version serves as the foundational implementation, offering a glimpse into the exciting future. Anticipate upcoming updates, including a sophisticated HTML-based script. Get ready for an immersive experience, allowing players to dive into mechanic roleplay while earning in-game currency.
