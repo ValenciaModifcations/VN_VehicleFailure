@@ -137,53 +137,91 @@ local function fscale(inputValue, originalMin, originalMax, newBegin, newEnd, cu
 	return rangedValue
 end
 
--- The "You need to get a new air intake" repair
-RegisterNetEvent('vn:mechanic')
-AddEventHandler('vn:mechanic', function()
+local function GetUserInput()
+    local result = false
+
+    while true do
+        Wait(0)
+
+        -- Check for "Y" key press
+        if IsControlJustReleased(0, 246) then  -- 246 is the control code for the "Y" key
+            result = true
+            break
+        end
+
+        -- Check for "N" key press
+        if IsControlJustReleased(0, 249) then  -- 249 is the control code for the "N" key
+            break
+        end
+    end
+
+    return result
+end
+
+local cooldownTimeMechanic = cfg.cooldownTimeMechanic
+local lastRepairTime = {}
+
+RegisterNetEvent('vn:combinedRepair', function()
     local player = NDCore.getPlayer()
+    local src = source
+    local currentTime = GetGameTimer()
+	local lastRepairTime = {}
 
-    if IsPedSittingInAnyVehicle(PlayerPedId()) then
-        local ped = PlayerPedId()
-        local vehicle = GetVehiclePedIsIn(ped, false)
-        if IsNearMechanic() then
-            local body = GetVehicleBodyHealth(vehicle)
-            local engine = GetVehicleEngineHealth(vehicle)
-            local petrol = GetVehiclePetrolTankHealth(vehicle)
-            local fuelLevel = GetVehicleFuelLevel(vehicle)
+    if lastRepairTime[src] and (currentTime - lastRepairTime[src]) < (IsNearMechanic() and cooldownTimeMechanic or 0) * 1000 then
+        local remainingTime = math.ceil((lastRepairTime[src] + (IsNearMechanic() and cooldownTimeMechanic or 0) * 1000 - currentTime) / 1000)
+        notification("~y~You need to wait " .. remainingTime .. " seconds before repairing your vehicle again.")
+    else
+        if IsPedSittingInAnyVehicle(PlayerPedId()) then
+            local ped = PlayerPedId()
+            local vehicle = GetVehiclePedIsIn(ped, false)
+			lib.progressBar({label = "Inspecting Damage", duration = 5500, useWhileDead = false, useCancel = true})
+            if IsNearMechanic() then
+                local repairCost = CalculateRepairCost(vehicle)
 
-            local percentage = (body + engine + petrol) / 3000
-            local newCost = math.floor(1750 * (1 - percentage)) -- Round down to the nearest integer
-
-            local playerCash = player.cash
-            local remainingCash = playerCash - newCost
-
-            if remainingCash >= 0 then
-                local preRepairFuelLevel = GetVehicleFuelLevel(vehicle)
-
-                SetVehicleUndriveable(vehicle, false)
-                SetVehicleFixed(vehicle)
-                SetVehicleEngineOn(vehicle, true, false)
-                TriggerServerEvent('VN_Repair:pay', newCost)
-                notification("~g~The mechanic repaired your car!")
-
-                SetVehicleFuelLevel(vehicle, preRepairFuelLevel)
+                if PromptUserForRepair(repairCost) then
+                    PerformMechanicRepair(vehicle, repairCost)
+                else
+                    notification("~y~Repair canceled")
+                    return
+                end
             else
-				notification("~y~Insufficent funds! You need around $" .. string.format("%.2f", newCost - playerCash) .. " more.")
+                PerformSkillCheck(vehicle)  -- Moved the line here
             end
         else
-            notification("~y~You must be near a mechanic to repair your car")
+            notification("~y~You must be in a vehicle to be able to repair it")
         end
-    else
-        notification("~y~You must be in a vehicle to be able to repair it")
     end
 end)
 
--- The "KIck the dashboard" Method repair
-RegisterNetEvent('vn:repair')
-AddEventHandler('vn:repair', function()
-    if IsPedSittingInAnyVehicle(PlayerPedId()) then -- check if the player is in a vehicle
+function CalculateRepairCost(vehicle)
+    local body = GetVehicleBodyHealth(vehicle)
+    local engine = GetVehicleEngineHealth(vehicle)
+    local petrol = GetVehiclePetrolTankHealth(vehicle)
+
+    local percentage = (body + engine + petrol) / 3000
+    return math.floor(1750 * (1 - percentage))
+end
+
+function PromptUserForRepair(repairCost)
+    NDCore.notify({
+		title = "Repair Cost",
+		description = "Repair cost: $" .. repairCost .. " Press 'Y' to accept or 'N' to refuse the repair",
+		type = "success",
+		duration = 4000,
+		position = "bottom"
+	})
+    return GetUserInput()
+end
+
+function PerformSkillCheck(vehicle)
+	lib.progressBar({label = "Use WASD as mentioned on screen to repiar vehicle", duration = 5500, useWhileDead = false, useCancel = true})
+    local skillCheckInputs = { 'w', 'a', 's', 'd' }
+    local success = lib.skillCheck({ 'easy', 'easy', { areaSize = 65, speedMultiplier = 1 }, 'easy' }, skillCheckInputs)
+
+    if success then
         local ped = PlayerPedId()
-        local vehicle = GetVehiclePedIsIn(ped, false)  
+        local vehicle = GetVehiclePedIsIn(ped, false)
+
         if GetVehicleEngineHealth(vehicle) < cfg.cascadingFailureThreshold + 5 then
             if GetVehicleOilLevel(vehicle) > 0 then
                 SetVehicleUndriveable(vehicle, false)
@@ -193,28 +231,71 @@ AddEventHandler('vn:repair', function()
                 healthPetrolTankLast = 750.0
                 SetVehicleEngineOn(vehicle, true, false)
                 SetVehicleOilLevel(vehicle, (GetVehicleOilLevel(vehicle) / 3) - 0.5)
-                notification("~g~" .. repairCfg.fixMessages[fixMessagePos] .. ", now get to a mechanic!")
-                fixMessagePos = fixMessagePos + 1
-                if fixMessagePos > repairCfg.fixMessageCount then fixMessagePos = 1 end
+                notification("~g~Your vehicle has been repaired! Now get to a mechanic!")
             else
                 notification("~r~Your vehicle was too badly damaged. Unable to repair!")
             end
         else
-            notification("~y~" .. repairCfg.noFixMessages[noFixMessagePos])
+            notification("~y~Vehicle issue: " .. repairCfg.noFixMessages[noFixMessagePos])
             noFixMessagePos = noFixMessagePos + 1
-            if noFixMessagePos > repairCfg.noFixMessageCount then noFixMessagePos = 1 end
+
+            if noFixMessagePos > repairCfg.noFixMessageCount then
+                noFixMessagePos = 1
+            end
         end
     else
-        notification("~y~You must be in a vehicle to be able to repair it")
+        lib.notify({ title = 'Fail', description = "You failed to repair the vehicle, maybe take a break before you break it some more?", position = 'bottom', duration = 5000 })
     end
-end)
+end
 
+function PerformMechanicRepair(vehicle, repairCost)
+    local player = NDCore.getPlayer()
+    local playerCash = player.cash
+	lastRepairTime[src] = GetGameTimer()
+
+    if playerCash < repairCost then
+        notification("~y~Insufficient funds! You need around $" .. string.format("%.2f", repairCost - playerCash) .. " more.")
+        return
+    end
+
+	local checkEngineBar = lib.progressBar({label = "Repairing Vehicle....", duration = 35000, useWhileDead = false, useCancel = true})
+
+    local preRepairFuelLevel = GetVehicleFuelLevel(vehicle)
+
+    SetVehicleUndriveable(vehicle, false)
+    SetVehicleFixed(vehicle)
+    SetVehicleEngineOn(vehicle, true, false)
+    TriggerServerEvent('VN_Repair:pay', repairCost)
+    notification("~g~The mechanic repaired your car!")
+
+    SetVehicleFuelLevel(vehicle, preRepairFuelLevel)
+    lib.notify({ title = "Vehicle Repaired!", duration = 2000, type = 'success' })
+    lastRepairTime[src] = GetGameTimer()
+end
+
+function IsNearMechanic()
+    local playerCoords = GetEntityCoords(PlayerPedId())
+
+    for _, mechanicLoc in ipairs(repairCfg.mechanics) do
+        local distance = GetDistanceBetweenCoords(playerCoords.x, playerCoords.y, playerCoords.z, mechanicLoc.x, mechanicLoc.y, mechanicLoc.z, true)
+
+        -- Adjust the distance threshold based on the 'r' value in repairCfg
+        if distance < mechanicLoc.r then
+            return true  -- Player is near a mechanic
+        end
+    end
+
+    return false  -- Player is not near a mechanic
+end
 
 RegisterNetEvent("ND:updateMoney", function(cash, bank)
     print(cash)
     print(bank)
 end)
 
+Citizen.CreateThread(function()
+    TriggerEvent('chat:addSuggestion', '/repair', 'Repair your vehicle')
+end)
 
 if cfg.torqueMultiplierEnabled or cfg.preventVehicleFlip or cfg.limpMode then
 	Citizen.CreateThread(function()
