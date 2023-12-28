@@ -15,3 +15,9 @@ This script is an essential component of ND_Core. For a standalone version, expl
 ### 📣 Notice
 
 This version serves as the foundational implementation, offering a glimpse into the exciting future. Anticipate upcoming updates, including a sophisticated HTML-based script. Get ready for an immersive experience, allowing players to dive into mechanic roleplay while earning in-game currency.
+
+
+CREDITS
+
+TheStoicBear
+Hakko
