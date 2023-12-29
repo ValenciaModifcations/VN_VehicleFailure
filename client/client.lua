@@ -165,7 +165,9 @@ RegisterNetEvent('vn:combinedRepair', function()
     local player = NDCore.getPlayer()
     local src = source
     local currentTime = GetGameTimer()
-	local lastRepairTime = {}
+
+    -- Initialize lastRepairTime[src] if it's nil or not set
+    lastRepairTime[src] = lastRepairTime[src] or 0
 
     if lastRepairTime[src] and (currentTime - lastRepairTime[src]) < (IsNearMechanic() and cooldownTimeMechanic or 0) * 1000 then
         local remainingTime = math.ceil((lastRepairTime[src] + (IsNearMechanic() and cooldownTimeMechanic or 0) * 1000 - currentTime) / 1000)
@@ -174,22 +176,36 @@ RegisterNetEvent('vn:combinedRepair', function()
         if IsPedSittingInAnyVehicle(PlayerPedId()) then
             local ped = PlayerPedId()
             local vehicle = GetVehiclePedIsIn(ped, false)
-			lib.progressBar({label = "Inspecting Damage", duration = 5500, useWhileDead = false, useCancel = true})
+            lib.progressBar({label = "Inspecting Damage", duration = 5500, useWhileDead = false, useCancel = true})
+
             if IsNearMechanic() then
                 local repairCost = CalculateRepairCost(vehicle)
 
                 if PromptUserForRepair(repairCost) then
-                    PerformMechanicRepair(vehicle, repairCost)
+                    PerformMechanicRepair(vehicle, repairCost, src)
                 else
                     notification("~y~Repair canceled")
                     return
                 end
             else
-                PerformSkillCheck(vehicle)  -- Moved the line here
+                if not NeedsRepair(vehicle) then
+                    notification("~y~Vehicle issue: " .. repairCfg.noFixMessages[noFixMessagePos])
+                    noFixMessagePos = noFixMessagePos + 1
+
+                    if noFixMessagePos > repairCfg.noFixMessageCount then
+                        noFixMessagePos = 1
+                    end
+                    return  -- No further processing needed if no repair is required
+                end
+
+                PerformSkillCheck(vehicle)
             end
         else
             notification("~y~You must be in a vehicle to be able to repair it")
         end
+
+        -- Update lastRepairTime[src] after successful repair or inspection
+        lastRepairTime[src] = GetGameTimer()
     end
 end)
 
@@ -235,30 +251,23 @@ function PerformSkillCheck(vehicle)
             else
                 notification("~r~Your vehicle was too badly damaged. Unable to repair!")
             end
-        else
-            notification("~y~Vehicle issue: " .. repairCfg.noFixMessages[noFixMessagePos])
-            noFixMessagePos = noFixMessagePos + 1
-
-            if noFixMessagePos > repairCfg.noFixMessageCount then
-                noFixMessagePos = 1
-            end
         end
     else
         lib.notify({ title = 'Fail', description = "You failed to repair the vehicle, maybe take a break before you break it some more?", position = 'bottom', duration = 5000 })
     end
 end
 
-function PerformMechanicRepair(vehicle, repairCost)
+function PerformMechanicRepair(vehicle, repairCost, src)
     local player = NDCore.getPlayer()
     local playerCash = player.cash
-	lastRepairTime[src] = GetGameTimer()
-
+    lastRepairTime[src] = GetGameTimer()
+	
     if playerCash < repairCost then
         notification("~y~Insufficient funds! You need around $" .. string.format("%.2f", repairCost - playerCash) .. " more.")
         return
     end
 
-	local checkEngineBar = lib.progressBar({label = "Repairing Vehicle....", duration = 35000, useWhileDead = false, useCancel = true})
+    local checkEngineBar = lib.progressBar({label = "Repairing Vehicle....", duration = 35000, useWhileDead = false, useCancel = true})
 
     local preRepairFuelLevel = GetVehicleFuelLevel(vehicle)
 
@@ -270,8 +279,18 @@ function PerformMechanicRepair(vehicle, repairCost)
 
     SetVehicleFuelLevel(vehicle, preRepairFuelLevel)
     lib.notify({ title = "Vehicle Repaired!", duration = 2000, type = 'success' })
-    lastRepairTime[src] = GetGameTimer()
 end
+
+-- This should work.
+function NeedsRepair(vehicle)
+    local engineHealth = GetVehicleEngineHealth(vehicle)
+
+    local repairThreshold = 300.0 
+
+    return engineHealth < repairThreshold
+end
+
+
 
 function IsNearMechanic()
     local playerCoords = GetEntityCoords(PlayerPedId())
