@@ -9,15 +9,11 @@ This script is an essential component of ND_Core. For a standalone version, expl
 
 - **Economy Integration:** Witness repair costs dynamically adjusting based on the extent of vehicle damage.
 - **User-Friendly Commands:**
-  - Use `/repair` when outside a mechanic shop.
-  - Execute `/mrepair` within the confines of a mechanic shop.
+  - Use `/repair` to repair the vehicle. 
+   - When outside of a mechanic shop, you will be given a skill check using keys "WASD" to repair the vehicle
+   - When inside of a mechanic shop, Repairs will take 30 seconds.
 
-### 📣 Notice
+### CREDITS
 
-This version serves as the foundational implementation, offering a glimpse into the exciting future. Anticipate upcoming updates, including a sophisticated HTML-based script. Get ready for an immersive experience, allowing players to dive into mechanic roleplay while earning in-game currency.
-
-
-CREDITS
-
-TheStoicBear
-Hakko
+- TheStoicBear ; Testing, Support, Advice
+- Hakko ; Support, Advice
